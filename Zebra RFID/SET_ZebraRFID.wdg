@@ -1,0 +1,136 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : SET_ZebraRFID
+ major_version : 28
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1086c9ed00e746c0
+ internal_properties : CAAAAAgAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1+
+      constant
+      	CALLBACK_READER_DISCONNECT	= "cbDisconnectUsers"
+      	CALLBACK_READER_CONNECT		= "cbConnectUsers"	
+      	CALLBACK_READ_TAGS			= "cbReadTags"	
+      end
+     type : 720896
+  procedures :
+   -
+     name : RFIDScannerList
+     procedure_id : 1190861171245729472
+     type_code : 15
+     code : |1+
+      // Summary: Gets the list of available scanners
+      // Syntax:
+      //[ <Result> = ] RFIDScannerList ()
+      //
+      
+      procedure RFIDScannerList()
+      
+      // Return the array of strings
+      return SET_InternalRFID.garrScannerList
+     type : 458752
+   -
+     name : RFIDSelectScanner
+     procedure_id : 1190861171245795008
+     type_code : 15
+     code : |1-
+      // Summary: Used to select a scanner
+      // Syntax:
+      //[ <Result> = ] RFIDSelectScanner (<sScannerName>)
+      //
+      // Parameters:
+      //	sScannerName: Name of the scanner to be selected
+      
+      procedure RFIDSelectScanner(local sScannerName)
+      
+      bFound is boolean
+      
+      FOR EACH ELEMENT stAScanner of SET_InternalRFID.garrScannerList
+      	if stAScanner.sName ~= sScannerName then
+      		// Use the same name (to make sure the right case is used)
+      		sScannerName	= stAScanner.sName
+      		bFound			= True
+      		break
+      	end
+      end
+      
+      if bFound = False then
+      	return False
+      end
+      
+      
+      
+      return _SelectRFIDReader_JAVA(sScannerName)
+     type : 458752
+   -
+     name : RFIDStartRead
+     internal_properties : CAAAAAgAAABWWI4sdD2nia9c1CRDVNs//OCL+joZ283BxN576yUAVLChHcZ2tTNf1yk7jHFO3JZlDPx5P1hxAwJsm7bZ/Hwmi8lF5ZBJTH3VygiM3k0twxVHfh4dVFCcx5idOrE4NdMAgvpgxN3IROFI/b3gej4a8pWaLZLj+2H/WAXC+U+giCWaoz8/loIgr4Dg2xY8G7ZzP/bXbw==
+     procedure_id : 1190861171245860544
+     type_code : 15
+     code : |1-
+      // Summary: Used to start RFID scans
+      // Syntax:
+      //RFIDStartRead ()
+      //
+      
+      procedure RFIDStartRead()
+      
+      _RFIDRead_Java()
+     type : 458752
+   -
+     name : RFIDStopRead
+     procedure_id : 1190861171245926080
+     type_code : 15
+     code : |1-
+      // Summary: Used to stop reading RFID tags
+      // Syntax:
+      // RFIDStopRead ()
+      //
+      procedure RFIDStopRead()
+      
+      _RFIDStop_Read_JAVA()
+     type : 458752
+   -
+     name : RFIDSetCallback
+     internal_properties : CAAAAAgAAAB6ExcAUAy9xI5+CVlUfEs0D/qfmLCS39l4Tu0ppZZsznwcYOgMdsrtrH18AfYhZ0EHQITy1EpdFBaHpNby7K4KzXSBuRKEQnLrQKLltcpDqcS2vWgfVxpNCF9tiiEzxZw8x70w3hLSKU5DCxtkC8At0MrtuSj8wzyGxblMR5hM9d7sd/imRnX8B17dMlcIMhoH9FXJ84YhpwpXl2vgXppUEhb3gA==
+     procedure_id : 1190861171245991616
+     type_code : 15
+     code : |1-
+      // Summary: Sets a callback
+      // Syntax:
+      // [<Result> = ] RFIDSetCallback (<sCallbackType>, <pCallback> is procedure)
+      //
+      // Parameters:
+      //	sCallbackType: Type of callback (CALLBACK_READER_CONNECT, CALLBACK_READER_DISCONNECT, CALLBACK_READ_TAGS)
+      //	pCallback (procedure): Procedure to call
+      
+      procedure RFIDSetCallback(sCallbackType, pCallback is procedure)
+      
+      
+      if not sCallbackType in (CALLBACK_READER_CONNECT, CALLBACK_READER_DISCONNECT, CALLBACK_READ_TAGS) then
+      	return False
+      end
+      
+      SetCallback(sCallbackType, pCallback)
+      
+      return True
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : CAAAAAgAAACVGQgYbalU7DKC3oH4ItDrjtcTHXXV/EuH8q0IbhyQlw==
+  original_name : COL_NoName1
+resources :
+ string_res :
+  identifier : 0x1e67b5fb00cc72d1
+  internal_properties : CAAAAAgAAACm76HWfKGWp33VjXInA4cRlqArlgTTA862QGt72W2ld5Y=
+custom_note :
+ internal_properties : CAAAAAgAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ

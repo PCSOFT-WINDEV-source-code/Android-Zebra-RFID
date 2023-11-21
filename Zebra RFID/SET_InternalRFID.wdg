@@ -1,0 +1,621 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : SET_InternalRFID
+ major_version : 28
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x1086c9ec00d6446f
+ internal_properties : CAAAAAgAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     internal_properties : CAAAAAgAAAB081iVOJ3q21JZ95hVINg9eT8Do/cq+5Z4hLUFXAtXQD19nUC/4fkoVhO2WYjK53VdsLx/bJp3ZFhdFBgWkx+uqCnRQg4dFzIGulZS4GMWGFNgga2OAE3vyzjdJq+FcWgNhVSYztzr1f/xuTRXYZ1wtFg2rw5N3DDpBgckmfsdNVYQ0LZenj8iHi7qVRkwnFFTR/AwSAXHaUCuFIsOzGcrABItvuwvwlBR8Ghz
+     code : |1+
+      
+      STReader is Structure
+      	sName		is string	<Serialize="name">
+      	sAddress	is string	<Serialize="address">
+      	sPassword	is string	<Serialize="password">
+      end
+      
+      STTagData is Structure
+      	nAntennaID				is int		<Serialize = "antennaID">
+      	bBrandIDStatus			is boolean	<Serialize = "brandIDStatus">
+      	nChannelIndex			is int		<Serialize = "channelIndex">
+      	nCRC					is int		<Serialize = "crc">
+      	n2V2OpCode				is int		<Serialize = "G2V2OpCode">
+      	
+      	n2V2OpStatus			is int		<Serialize = "G2V2OpStatus">
+      	
+      	sResponse				is string	<Serialize = "G2V2OpResponse">
+      	nMemoryBank				is int		<Serialize = "memoryBank">
+      	sMemoryBankData			is string	<Serialize = "memoryBankData">
+      	nAllocatedBytes			is int		<Serialize = "memoryBankDataSize">
+      	nMemoryBankDataOffset	is int		<Serialize = "memoryBankDataOffset">
+      	nNumberOfWords			is int		<Serialize = "numberOfWords">
+      	nOpCode					is int		<Serialize = "OpCode">
+      	nOpStatus				is int		<Serialize = "OpStatus">
+      	nProtocolControl		is int		<Serialize = "ProtocolControl">
+      	nPeakRSSI				is int		<Serialize = "peakRSSI">
+      	sPermaLockData			is string	<Serialize = "permaLockData">
+      	nPhase					is int		<Serialize = "phase">
+      	nEvent					is int		<Serialize = "tagEvent">
+      	dtSystemTime			is datetime	<Serialize = "tagEventTimestamp">
+      	sTagID					is string	<Serialize = "tagID">
+      	nNbAllocatedSize		is int		<Serialize = "tagIDSize">
+      	nSeenCount				is int		<Serialize = "tagSeenCount">
+      	nXPCWord1				is int		<Serialize = "tagXPCFirstWord">
+      	nXPCWord2				is int		<Serialize = "tagXPCSecondWord">
+      	
+      	// Location Info
+      	nRelativeDistance		is int		<Serialize = "distance">
+      	
+      end
+      
+      
+      garrScannerList	is array of STReader							// List of accessible scanners
+      gaaCallback		is ASSOCIATIVE ARRAY of procedure				// List of defined callbacks
+      
+      // Initialize readers
+      InitRFIDReaders()
+      
+      // Requests the list of RFID readers
+      _GetReadersList()
+     type : 720896
+   -
+     code : |1+
+      
+      
+     type : 720898
+  procedures :
+   -
+     name : InitRFIDReaders
+     internal_properties : CAAAAAgAAACdsOroKgpGI3S1j1+2IJWTMI7Z/CUWc2CRfuhqx9R/f+bJgc8PSBuyrD1s2n/FntS7T7EZdv3sPhDRwlFBBg0ABotY63qflBUe7D/CKFym95+dw9IoWPQy+Ujlig/yDneXXv9t0jUHQEbxfPM68hv+ZdNZ6OJPKL+kEVAuI+9dkJhqErLf/mE8Jktt89CRVjXzflxoz/09bLJSh2yUhGKZOke1rqeGd9e04CHyLRIUnf7PLbfi+Q==
+     procedure_id : 1190861166949647471
+     type_code : 15
+     code : |1+
+      import android.content.Context;
+      import android.content.Intent;
+      import android.content.IntentFilter;
+      import android.util.Log;
+      import java.util.ArrayList;
+      import org.json.JSONObject;
+      import org.json.JSONException;
+      import android.widget.Toast;
+      
+      import com.zebra.rfid.api3.ACCESS_OPERATION_CODE;
+      import com.zebra.rfid.api3.ACCESS_OPERATION_STATUS;
+      import com.zebra.rfid.api3.ENUM_TRANSPORT;
+      import com.zebra.rfid.api3.START_TRIGGER_TYPE;
+      import com.zebra.rfid.api3.STATUS_EVENT_TYPE;
+      import com.zebra.rfid.api3.ENUM_TRIGGER_MODE;
+      import com.zebra.rfid.api3.HANDHELD_TRIGGER_EVENT_TYPE;
+      import com.zebra.rfid.api3.InvalidUsageException;
+      import com.zebra.rfid.api3.OperationFailureException;
+      import com.zebra.rfid.api3.RFIDResults;
+      import com.zebra.rfid.api3.ReaderDevice;
+      import com.zebra.rfid.api3.Readers;
+      import com.zebra.rfid.api3.RfidEventsListener;
+      import com.zebra.rfid.api3.RfidReadEvents;
+      import com.zebra.rfid.api3.RfidStatusEvents;
+      import com.zebra.rfid.api3.RFIDReader;
+      import com.zebra.rfid.api3.TagData;
+      
+      // Declares the list of readers
+      public static Readers mReadersList = null;
+      public static boolean mbReadInProgress = false;
+      public static RFIDReader mConnectedReader = null;
+      public static int nbTagsToRead = 100;			// Number of tags to be read simultaneously when one tag is read successfully
+      public final static RFIDEventHandler mEventHandler = new RFIDEventHandler();
+      
+      public static void InitRFIDReaders()
+      {
+      	InvalidUsageException exception = null;
+      	try
+      	{
+      		mReadersList = new Readers(getApplicationContext(), ENUM_TRANSPORT.SERVICE_SERIAL) ;
+      		// Check if we can get the RFID readers via serial port
+      		// If not, try via Bluetooth
+      		if(mReadersList == null){
+      			throw new InvalidUsageException("Trying to call GetAvailableRFIDReaderList method on a null object","mReadersList == null");	
+      		}
+      		ArrayList<ReaderDevice> availableRFIDReaderList = mReadersList.GetAvailableRFIDReaderList();
+      	} 
+      	catch(InvalidUsageException e) 
+      	{
+      		e.printStackTrace();
+      		exception = e;
+      	}
+      	
+      	if (exception != null) 
+      	{
+      		mReadersList.Dispose();
+      		mReadersList = null;
+      		if (mReadersList == null) 
+      		{
+      			mReadersList = new Readers(getApplicationContext(), ENUM_TRANSPORT.BLUETOOTH);
+      		}
+      	}
+      }
+      
+      // Class that manages the RFID device's events
+      public static class RFIDDeviceHandler implements Readers.RFIDReaderEventHandler {
+      	@Override
+      	public void RFIDReaderAppeared(ReaderDevice device) {		
+      		// A WLanguage procedure is called to indicate which device is connected
+      		callWLProcedure("_RFIDReaderDetected", GetStringFromDevice(device));
+      		
+      	}
+      	
+      	@Override
+      	public void RFIDReaderDisappeared(ReaderDevice device) {
+      		// A WLanguage procedure is called to indicate which device is connected
+      		callWLProcedure("_RFIDReaderDisconnected", GetStringFromDevice(device));
+      		
+      	}
+      } 
+      
+      // Class that manages the RFID reader's events
+      public static class RFIDEventHandler implements RfidEventsListener {
+      	
+      	@Override
+      	public void eventReadNotify(RfidReadEvents e)
+      	{
+      		
+      		// Get the connected reader
+      		if (mConnectedReader == null){
+      			return;
+      		}
+      		
+      		// Read tags
+      		final TagData[] myTags = mConnectedReader.Actions.getReadTags(nbTagsToRead);
+      		if (myTags == null){
+      			return;
+      		}
+      		
+      		
+      		String sTagList = "";
+      		
+      		// Browses the tags
+      		for (int i = 0; i < myTags.length ; i++){
+      			
+      			if (myTags[i].getOpCode() == ACCESS_OPERATION_CODE.ACCESS_OPERATION_READ &&
+      			myTags[i].getOpStatus() == ACCESS_OPERATION_STATUS.ACCESS_SUCCESS) {
+      				break;
+      			}
+      			
+      			
+      			if (sTagList != ""){
+      				sTagList += ",";
+      			}
+      			Log.i("eventReadNotify", myTags[i].getTagID());
+      			// 
+      			sTagList = _TagToJSON(myTags[i]);
+      			
+      		}
+      		
+      		// Call the callback
+      		callWLProcedure("_RFIDTagsRead","[" + sTagList + "]");
+      		
+      	}
+      	
+      	@Override
+      	public void eventStatusNotify(RfidStatusEvents rfidStatusEvents) 
+      	{
+      		if (rfidStatusEvents.StatusEventData.getStatusEventType() == STATUS_EVENT_TYPE.HANDHELD_TRIGGER_EVENT){
+      			
+      			if (mbReadInProgress == false && rfidStatusEvents.StatusEventData.HandheldTriggerEventData.getHandheldEvent() == HANDHELD_TRIGGER_EVENT_TYPE.HANDHELD_TRIGGER_PRESSED){
+      				
+      				_RFIDRead_Java();
+      			}else{
+      				
+      				_RFIDStop_Read_JAVA();
+      			}
+      			
+      			
+      			
+      		}else{
+      			
+      			Log.d("eventStatusNotify","Other event");
+      		}
+      		return;
+      	}
+      }
+      
+      public static String GetStringFromDevice(ReaderDevice stDevice)
+      {
+      	JSONObject object = new JSONObject();
+      	try {
+      		object.put("name", stDevice.getName());
+      		object.put("address", stDevice.getAddress());
+      		object.put("password", stDevice.getPassword());
+      		
+      		return object.toString();
+      		
+      	} catch (JSONException e) {
+      		e.printStackTrace();
+      		return "";
+      	}
+      	
+      }
+      
+      public static String _TagToJSON(TagData stTag)
+      {
+      	JSONObject object = new JSONObject();
+      	try {
+      		
+      		object.put("antennaID", stTag.getAntennaID());
+      		object.put("brandIDStatus", stTag.getBrandIDStatus());
+      		object.put("channelIndex", stTag.getChannelIndex());
+      		object.put("crc", stTag.getCRC());
+      		if (stTag.getG2v2OpCode() != null){
+      			object.put("G2V2OpCode", stTag.getG2v2OpCode().toString());
+      		}
+      		if (stTag.getG2v2OpStatus() != null){
+      			object.put("G2V2OpStatus", stTag.getG2v2OpStatus().toString());
+      		}
+      		
+      		object.put("G2V2OpResponse", stTag.getG2v2Response());
+      		if (stTag.getMemoryBank() != null){
+      			object.put("memoryBank", stTag.getMemoryBank().toString());
+      		}
+      		
+      		object.put("memoryBankData", stTag.getMemoryBankData());
+      		object.put("memoryBankDataSize", stTag.getMemoryBankDataAllocatedSize());
+      		object.put("memoryBankDataOffset", stTag.getMemoryBankDataOffset());
+      		object.put("numberOfWords", stTag.getNumberOfWords());
+      		if (stTag.getOpCode() != null){
+      			object.put("OpCode", stTag.getOpCode().toString());
+      		}
+      		if (stTag.getOpStatus() != null){
+      			object.put("OpStatus", stTag.getOpStatus().toString());
+      		}
+      		
+      		object.put("ProtocolControl", stTag.getPC());
+      		object.put("peakRSSI", stTag.getPeakRSSI());
+      		object.put("permaLockData", stTag.getPermaLockData());
+      		object.put("phase", stTag.getPhase());
+      		object.put("tagEvent", stTag.getTagEvent());
+      		object.put("tagEventTimestamp", stTag.getTagEventTimeStamp());
+      		object.put("tagID", stTag.getTagID());
+      		object.put("tagIDSize", stTag.getTagIDAllocatedSize());
+      		object.put("tagSeenCount", stTag.getTagSeenCount());
+      		
+      		object.put("tagXPCFirstWord", stTag.getXPC_W1());
+      		object.put("tagXPCSecondWord", stTag.getXPC_W2());
+      		
+      		if (stTag.isContainsLocationInfo()){
+      			object.put("distance", stTag.LocationInfo.getRelativeDistance());
+      		}
+      	} catch (JSONException e) {
+      		Log.e("_TagToJSON", e.getMessage());
+      		
+      		return "";
+      	}
+      	
+      	return object.toString();
+      	
+      }
+      
+     language : Java
+     type : 458752
+   -
+     name : _RFIDReaderDisconnected
+     internal_properties : CAAAAAgAAABufb1wnGDd4GcJm5CkDWEaqYN3I+fzT8mYTo15laa83gycsGhsdgpt/E0MIRYBR4HnkIQipFpNBPZn5OZCHD6avfQRmfKEwvJ7cBKF9YrjKWTGBYDXbyJVsIcF0mn7DbRUb+VotmoasVZLo+MsU+iFiLKVMcB0S0TOLbFUr8C0rZb0X9Cefr0Er2b1On+w6cz+HwOHyfDMnnIDPrd8lupk5uTjlA==
+     procedure_id : 1190861166949713007
+     type_code : 15
+     code : |1-
+      // Summary: Notifies when the RFID reader is disconnected
+      // Syntax:
+      // _RFIDReaderDisconnected (<sDeviceInfo> is string)
+      //
+      // Parameters:
+      //	sDeviceInfo (UNICODE string): Details of the reader that has been disconnected
+      
+      procedure private _RFIDReaderDisconnected(sDeviceInfo is string)
+      
+      stMyDevice is STReader
+      
+      // Deserialize the reader's info
+      Deserialize(stMyDevice, sDeviceInfo, psdJSON)
+      
+      // Runs the callback
+      pCallback is procedure <- gaaCallback[CALLBACK_READER_DISCONNECT]
+      if pCallback <> Null then
+      	pCallback(stMyDevice)
+      end
+     type : 458752
+   -
+     name : _RFIDReaderDetected
+     internal_properties : CAAAAAgAAADS+QHYaNRB5Ft9J0TQyUXuZbcrn3Z3N816qJGXk9gGiAomdqy0vpr5jqfAf3jHmbuNSoLWNBrdkMxlfJCwYiwwE17jmRZ4kkLNEvq/eyB5v97c2kkmSP94R7rCa+S4PAWxhIbNURfL4AGK6FRfCOPi6fumXqvBnBed8IrhJrmD/suxTDFdj7p7VsEm3x7RfHw2PwufoVhEDmKr7u+8Xrq0UkhfKA==
+     procedure_id : 1190861166949778543
+     type_code : 15
+     code : |1-
+      // Summary: Notifies when the reader is detected
+      // Syntax:
+      // _RFIDReaderDetected (<sDeviceInfo> is string)
+      //
+      // Parameters:
+      //	sDeviceInfo (UNICODE string): Details of the connected reader
+      //
+      procedure private _RFIDReaderDetected(sDeviceInfo is string)
+      
+      
+      stMyDevice is STReader
+      
+      // Deserialize the reader's info
+      Deserialize(stMyDevice, sDeviceInfo, psdJSON)
+      
+      // Runs the callback
+      pCallback is procedure <- gaaCallback[CALLBACK_READER_CONNECT]
+      if pCallback <> Null then
+      	pCallback(stMyDevice)
+      end
+     type : 458752
+   -
+     name : _GetReadersList
+     internal_properties : CAAAAAgAAAD6dSZwE36r6YQEu4m2OBPatcKOcnb1AcYOwNAZSe5y55ANm7p5aJSpTgbC0PYk4cruHpa7TtTRI/4qcTa8enw91abwdHBsa14UTB4lbdoRep8cDMp+42h3BapFlRDdBWCce5wA5eaqVamUjyBhudQ90qCmQ81WEaZZRuVx9i7eD0uVzS9cH457EX5A6M2pfFXntEcm+ZI=
+     procedure_id : 1190861166949844079
+     type_code : 15
+     code : |1+
+      procedure private _GetReadersList()
+      
+      sReadersList is string
+      
+      // Get the list of RFID readers in Java from the SDK
+      sReadersList = _GetRFIDReadersList_Java()
+      
+      // Deserialize the reader's info
+      when exception in
+      	Deserialize(garrScannerList, sReadersList, psdJSON)
+      do
+      	
+      end
+     type : 458752
+   -
+     name : _GetRFIDReadersList_Java
+     procedure_id : 1190861166949909615
+     type_code : 15
+     code : |1+
+      public static String _GetRFIDReadersList_Java()
+      {
+      	
+      	if (mReadersList == null){
+      		return "";
+      	}
+      	
+      	// If the list is available
+      	ArrayList<ReaderDevice> ReaderList = null;
+      	try{
+      		ReaderList = mReadersList.GetAvailableRFIDReaderList();
+      		
+      	} catch(InvalidUsageException e) {
+      		return "";
+      		
+      	} finally {
+      		
+      	}
+      	
+      	// Beginning of array
+      	String sList = "";
+      	
+      	for (int i = 0; i < ReaderList.size(); i++){
+      		
+      		if (!(sList.equals(""))){
+      			sList += ",";
+      		}
+      		
+      		sList += GetStringFromDevice(ReaderList.get(i));
+      		
+      	}
+      	
+      	
+      	return "[" + sList + "]";
+      }
+      
+     language : Java
+     type : 458752
+   -
+     name : _SelectRFIDReader_JAVA
+     procedure_id : 1190861166949975151
+     type_code : 15
+     code : |1-
+      public static boolean _SelectRFIDReader_JAVA(String sDeviceName)
+      {
+      	
+      	boolean bFound = false;
+      	ReaderDevice stAReader = null;
+      	int i;
+      	
+      	// If the list is available
+      	ArrayList<ReaderDevice> ReaderList = null;
+      	try{
+      		ReaderList = mReadersList.GetAvailableRFIDReaderList();
+      		
+      	} catch(InvalidUsageException e) {
+      		return false;
+      		
+      	} finally {
+      		
+      	}
+      	
+      	
+      	// Loop through the array to compare by name and find the right device
+      	for (i = 0; i < ReaderList.size(); i++){
+      		stAReader = ReaderList.get(i);
+      		
+      		if (stAReader.getName().equals(sDeviceName)){
+      			bFound = true;
+      			break;
+      		}
+      	}
+      	
+      	// Found?
+      	if (bFound == false){
+      		return false;
+      	}
+      	
+      	
+      	try {
+      		
+      		
+      		// Disconnect a reader if found
+      		if (mConnectedReader != null){
+      			mConnectedReader.disconnect();
+      		}
+      		
+      		
+      		// Get and connect the reader
+      		mConnectedReader = stAReader.getRFIDReader();
+      		mConnectedReader.connect();
+      		
+      		// Declare an eventHandler
+      		mConnectedReader.Events.addEventsListener(mEventHandler);	
+      		
+      		mConnectedReader.Events.setBatchModeEvent(true);
+      		mConnectedReader.Events.setReaderDisconnectEvent(true);
+      		mConnectedReader.Events.setInventoryStartEvent(true);
+      		mConnectedReader.Events.setInventoryStopEvent(true);
+      		mConnectedReader.Events.setTagReadEvent(true);
+      		mConnectedReader.Events.setHandheldEvent(true);
+      		mConnectedReader.Events.setBatteryEvent(true);
+      		mConnectedReader.Events.setPowerEvent(true);
+      		mConnectedReader.Events.setOperationEndSummaryEvent(true);		
+      		
+      		mConnectedReader.Config.setTriggerMode(ENUM_TRIGGER_MODE.RFID_MODE, true);
+      		mConnectedReader.Config.getStartTrigger().setTriggerType(START_TRIGGER_TYPE.START_TRIGGER_TYPE_HANDHELD);
+      		mConnectedReader.Config.setLedBlinkEnable(true);
+      		
+      		
+      	} catch(InvalidUsageException e) {
+      		return false;
+      		
+      	} catch (OperationFailureException e){
+      		return false;
+      	}
+      	finally {
+      		
+      	}
+      	
+      	return mConnectedReader.isConnected();	
+      	
+      }
+     language : Java
+     type : 458752
+   -
+     name : _RFIDTagsRead
+     internal_properties : CAAAAAgAAABufb1wnGDd4GcJm5CkDWEaqYN3I+fzT8mYTo15laa83gycsGhsdgpt/E0MIRYBR4HnkIQipFpNBPZn5OZCHD6avfQRmfKEwvJ7cBKF9YrjKWTGBYDXbyJVsIcF0mn7DbRUb+VotmoasVZLo+MsU+iFiLKVMcB0S0TOLbFUr8C0rZb0X9Cefr0Er2b1On+w6cz+HwOHyfDMnnIDPrd8lupk5uTjlA==
+     procedure_id : 1190861166950040687
+     type_code : 15
+     code : |1-
+      // Summary: Notifies each time an RFID tag is read
+      // Syntax:
+      // _RFIDTagsRead (<sTagList>)
+      //
+      // Parameters:
+      // 	sTagList: List of tags that have been read
+      //
+      procedure _RFIDTagsRead(sTagList)
+      
+      arrTags is array of STTagData
+      
+      // Deserialize the reader's info
+      Deserialize(arrTags, sTagList, psdJSON)
+      
+      // Runs the callback
+      pCallback is procedure <- gaaCallback[CALLBACK_READ_TAGS]
+      if pCallback <> Null then
+      	ExecuteMainThread(pCallback,(arrTags))
+      end
+     type : 458752
+   -
+     name : SetCallback
+     internal_properties : CAAAAAgAAABCbWeLeHyJADzMDWMWermSLfz5RGi6843y2JnH97C6LIKmumystnYpDndIZ7y/7V91sl5uvKI5cOR9PFAMGjCES46/cX6I3nrFMtLPZ2jVkx4MhHsUKulizSy8ffKCpuPvatAv1xndMkdMAm69qk1Yd1EwmCnzvgH7OiwzfFMFHOmX7mNjMXT9ZJs4+Txzq7G6P8wUgKEorJ+gmkL9cYvLvLTPuA==
+     procedure_id : 1190861166950106223
+     type_code : 15
+     code : |1-
+      // Summary: Used to specify a callback for an event
+      // Syntax:
+      // SetCallback (<sTypeCallback>, <pCallback> est procédure)
+      //
+      // Parameters:
+      // 	sCallbackType: Type of callback (CALLBACK_READER_DISCONNECT, CALLBACK_READER_CONNECT, CALLBACK_READ_TAGS)
+      //	pCallback (procedure): Procedure to call
+      //
+      procedure SetCallback(sCallbackType, pCallback is procedure)
+      
+      gaaCallback[sCallbackType] = pCallback
+     type : 458752
+   -
+     name : _RFIDRead_Java
+     procedure_id : 1190861166950171759
+     type_code : 15
+     code : |1-
+      public static void _RFIDRead_Java()
+      {
+      	if (mConnectedReader == null){
+      		return;
+      	}
+      	try{
+      		
+      		mbReadInProgress = true;
+      		
+      		mConnectedReader.Actions.Inventory.perform();
+      		
+      		
+      	} catch(InvalidUsageException e ) {
+      		
+      	} catch (OperationFailureException e){
+      		
+      	}finally {
+      		
+      	}
+      	
+      	
+      	
+      }
+     language : Java
+     type : 458752
+   -
+     name : _RFIDStop_Read_JAVA
+     procedure_id : 1190861166950237295
+     type_code : 15
+     code : |1-
+      public static void _RFIDStop_Read_JAVA()
+      {
+      	
+      	if (mConnectedReader == null){
+      		return;
+      	}
+      	
+      	try{
+      		mbReadInProgress = false;
+      		mConnectedReader.Actions.Inventory.stop();
+      		
+      	} catch(InvalidUsageException e ) {
+      		
+      	} catch (OperationFailureException e){
+      		
+      	}finally {
+      		
+      	}
+      	
+      }
+     language : Java
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : CAAAAAgAAACVGQgYbalU7DKC3oH4ItDrjtcTHXXV/EuH8q0IbhyQlw==
+  original_name : COL_NoName1
+resources :
+ string_res :
+  identifier : 0x1e67a89a00b12fe9
+  internal_properties : CAAAAAgAAACm76HWfKGWp33VjXInA4cRlqArlgTTA862QGt72W2ld5Y=
+custom_note :
+ internal_properties : CAAAAAgAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
